@@ -3,7 +3,6 @@ package com.example.myapplication
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -90,7 +89,7 @@ fun CricketGameScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    text = "Runda: ${viewModel.currentRound} / 20",
+                    text = "Runda: ${viewModel.currentRound} / 15", // Promijenjeno na 15 jer kriket traje 15 rundi
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFFE65100), // Narančasta boja za vidljivost preko pozadine
@@ -157,7 +156,7 @@ fun CricketGameScreen(
 
                             // Gumb za unos pogotka u sektor
                             Button(
-                                onClick = { viewModel.handleCricketSectorClick(sector,context) },
+                                onClick = { viewModel.handleCricketSectorClick(sector, context) },
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (hits >= 3) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
@@ -180,7 +179,7 @@ fun CricketGameScreen(
 
             // --- GUMB ZA SLJEDEĆEG IGRAČA ---
             Button(
-                onClick = { viewModel.nextCricketPlayer() },
+                onClick = { viewModel.nextCricketPlayer(context) }, // POPRAVLJENO: Prolijeđen context parametar!
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()

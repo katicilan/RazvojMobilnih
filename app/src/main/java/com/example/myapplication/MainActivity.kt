@@ -41,44 +41,54 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
 
                     Box(modifier = Modifier.fillMaxSize()) {
+                        // Zamijeni NavHost i rute unutar MainActivity.kt s ovim:
                         NavHost(
                             navController = navController,
-                            startDestination = "mode_selection"
+                            startDestination = "splash" // Aplikacija sada KREĆE od Splash zaslona!
                         ) {
-                            // 1. Ekran: Odabir moda igre
-                            composable("mode_selection") {
+                            // --- 0. Ekran: Splash Screen (DODANO) ---
+                            composable(route = "splash") {
+                                SplashScreen(
+                                    onTimeout = {
+                                        // Preusmjeravanje na odabir moda i uklanjanje splash-a iz povijesti (Back stacka)
+                                        navController.navigate("mode_selection") {
+                                            popUpTo("splash") { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
+                            // --- 1. Ekran: Odabir moda ---
+                            composable(route = "mode_selection") {
                                 ModeSelectionScreen(
                                     onModeSelected = { selectedMode ->
-                                        navController.navigate("player_selection/${selectedMode.name}")
+                                        // Čim igrač klikne mod, ODMAH ga zaključavamo u ViewModelu!
+                                        gameViewModel.currentTrackedMode = selectedMode
+                                        // Navigacija je sada potpuno jednostavna i sigurna
+                                        navController.navigate("player_selection")
                                     }
                                 )
                             }
 
-                            // 2. Ekran: Odabir igrača
-                            composable(
-                                route = "player_selection/{modeName}",
-                                arguments = listOf(navArgument("modeName") { type = NavType.StringType })
-                            ) { backStackEntry ->
-                                val modeName = backStackEntry.arguments?.getString("modeName") ?: "MODE_501"
-                                val mode = DartMode.valueOf(modeName)
-
+                            // --- 2. Ekran: Odabir igrača ---
+                            composable(route = "player_selection") {
                                 PlayerSelectionScreen(
-                                    mode = mode,
                                     viewModel = gameViewModel,
-                                    onLetsDartClicked = { selectedPlayersList: List<String> ->
-                                        gameViewModel.startNewGame(mode, selectedPlayersList)
+                                    onPlayersSelected = { selectedPlayersList ->
+                                        // Pokrećemo igru s modom koji smo već spremili u prošlom koraku
+                                        gameViewModel.startNewGame(gameViewModel.currentTrackedMode, selectedPlayersList)
 
-                                        if (mode == DartMode.CRICKET) {
+                                        // Idemo na odgovarajući zaslon igre
+                                        if (gameViewModel.currentTrackedMode == DartMode.CRICKET) {
                                             navController.navigate("cricket_game")
                                         } else {
-                                            val playersString = selectedPlayersList.joinToString(separator = ",")
-                                            navController.navigate("x01_game/$playersString")
+                                            val firstPlayer = selectedPlayersList.firstOrNull() ?: "Igrač"
+                                            navController.navigate("x01_game/$firstPlayer")
                                         }
                                     }
                                 )
                             }
 
-                            // 3. Ekran: X01 Game Screen
+                            // --- 3. Ekran: X01 Game Screen ---
                             composable(
                                 route = "x01_game/{playerName}",
                                 arguments = listOf(navArgument("playerName") { type = NavType.StringType })
@@ -90,7 +100,6 @@ class MainActivity : ComponentActivity() {
                                     viewModel = gameViewModel,
                                     playerName = nameFromRoute,
                                     onGameFinished = {
-                                        // Ovdje više NE POZIVAMO finishGameAndUploadStats!
                                         navController.navigate("mode_selection") {
                                             popUpTo("mode_selection") { inclusive = true }
                                         }
@@ -98,13 +107,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-// --- 4. Ekran: Cricket Game Screen ---
+                            // --- 4. Ekran: Cricket Game Screen ---
                             composable(route = "cricket_game") {
                                 CricketGameScreen(
                                     playerName = "",
                                     viewModel = gameViewModel,
                                     onGameFinished = {
-                                        // Ovdje isto NE POZIVAMO finishGameAndUploadStats!
                                         navController.navigate("mode_selection") {
                                             popUpTo("mode_selection") { inclusive = true }
                                         }

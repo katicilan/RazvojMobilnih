@@ -12,13 +12,20 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 
+// Pomoćna klasa za pamćenje povijesti kriket pogodaka (kako bi Undo/Back radio)
+data class CricketHistoryEntry(
+    val player: String,
+    val sector: String,
+    val gainedPoints: Int,
+    val addedHit: Boolean
+)
+
 class GameViewModel : ViewModel() {
     var firebasePlayers = mutableStateListOf<Player>()
     var selectedPlayers = mutableStateListOf<String>()
     var playersScores = mutableStateMapOf<String, Int>()
     var currentPlayerIndex by mutableStateOf(0)
 
-    // Praćenje broja runda i trenutnog moda
     var currentRound by mutableStateOf(1)
     var currentTrackedMode by mutableStateOf(DartMode.MODE_501)
 
@@ -35,6 +42,8 @@ class GameViewModel : ViewModel() {
     private var scoreAtStartOfTurn = 501
 
     var cricketStatus = mutableStateMapOf<String, Map<String, Int>>()
+    // Lista u kojoj pamtimo pogotke unutar trenutne runde za kriket (za Undo)
+    private var cricketHistory = mutableStateListOf<CricketHistoryEntry>()
 
     fun getMaxRounds(mode: DartMode): Int {
         return when (mode) {
@@ -53,6 +62,7 @@ class GameViewModel : ViewModel() {
         playerTotalPoints.clear()
         playerTotalThrows.clear()
         cricketStatus.clear()
+        cricketHistory.clear()
         winnerName = null
         isBustTriggered = false
         currentRound = 1
@@ -89,7 +99,11 @@ class GameViewModel : ViewModel() {
         return selectedPlayers.getOrNull(currentPlayerIndex) ?: "Gost"
     }
 
-    fun handleNumberClick(number: Int, context: Context) { // <-- Dodan parametar context
+    fun shuffleSelectedPlayers() {
+        selectedPlayers.shuffle()
+    }
+
+    fun handleNumberClick(number: Int, context: Context) {
         if (winnerName != null || isBustTriggered) return
 
         val freeDartIndex = currentDarts.indexOfFirst { it == null }
@@ -115,8 +129,6 @@ class GameViewModel : ViewModel() {
                 if (wasDoubleUsed || (number == 25 && multiplier == 2)) {
                     playersScores[player] = 0
                     winnerName = player
-
-                    // IGRA JE ZAVRŠILA POGOTKOM NA NULU -> SPREMAJ STATISTIKU!
                     finishGameAndUploadStats(context)
                 } else {
                     playersScores[player] = scoreAtStartOfTurn
@@ -150,15 +162,39 @@ class GameViewModel : ViewModel() {
     fun handleBackAction(): Boolean {
         if (winnerName != null) return false
 
+        // Ako igramo CRICKET mod, radimo undo preko kriket povijesti
+        if (currentTrackedMode == DartMode.CRICKET) {
+            if (cricketHistory.isNotEmpty()) {
+                val lastAction = cricketHistory.removeAt(cricketHistory.size - 1)
+                val currentHitsMap = cricketStatus[lastAction.player]?.toMutableMap() ?: return true
+
+                if (lastAction.addedHit) {
+                    val currentHits = currentHitsMap[lastAction.sector] ?: 0
+                    if (currentHits > 0) {
+                        currentHitsMap[lastAction.sector] = currentHits - 1
+                        cricketStatus[lastAction.player] = currentHitsMap
+                    }
+                }
+
+                if (lastAction.gainedPoints > 0) {
+                    val currentPoints = playersScores[lastAction.player] ?: 0
+                    playersScores[lastAction.player] = maxOf(0, currentPoints - lastAction.gainedPoints)
+                }
+                return true
+            }
+            return false
+        }
+
+        // Standardno poništavanje za X01 igre
         val lastDartIndex = currentDarts.indexOfLast { it != null }
         if (lastDartIndex != -1) {
-            undoLastDart() // Briše samo zadnju strelicu
+            undoLastDart()
             return true
         }
-        return false // Ako nema strelica, javi ekranu da može aktivirati dupli klik za izlaz
+        return false
     }
 
-    fun nextPlayer(context: Context) { // <-- Dodan parametar context
+    fun nextPlayer(context: Context) {
         val player = getCurrentPlayer()
         if (winnerName != null) return
 
@@ -177,8 +213,6 @@ class GameViewModel : ViewModel() {
                 if (currentRound >= maxRounds) {
                     val bestPlayer = selectedPlayers.minByOrNull { playersScores[it] ?: 501 }
                     winnerName = bestPlayer
-
-                    // IGRA JE ZAVRŠILA ISTEKOM RUNDI -> SPREMAJ STATISTIKU!
                     finishGameAndUploadStats(context)
                     return
                 } else {
@@ -198,7 +232,7 @@ class GameViewModel : ViewModel() {
         return String.format("%.1f", ppt)
     }
 
-    fun handleCricketSectorClick(sector: String, context: Context) { // <-- Dodan context
+    fun handleCricketSectorClick(sector: String, context: Context) {
         if (winnerName != null) return
 
         val activePlayer = getCurrentPlayer()
@@ -209,7 +243,11 @@ class GameViewModel : ViewModel() {
         if (currentHits < 3) {
             updatedHitsMap[sector] = currentHits + 1
             cricketStatus[activePlayer] = updatedHitsMap
-            checkCricketWinner(context) // <-- Proslijedi dalje
+
+            // Spremi u povijest za Undo gumb
+            cricketHistory.add(CricketHistoryEntry(activePlayer, sector, gainedPoints = 0, addedHit = true))
+
+            checkCricketWinner(context)
         } else {
             val numericValue = if (sector == "BULL") 25 else sector.toInt()
             val anyOpponentNotClosed = selectedPlayers.any { player ->
@@ -219,12 +257,16 @@ class GameViewModel : ViewModel() {
             if (anyOpponentNotClosed) {
                 val currentPoints = playersScores[activePlayer] ?: 0
                 playersScores[activePlayer] = currentPoints + numericValue
-                checkCricketWinner(context) // <-- Proslijedi dalje
+
+                // Spremi u povijest za Undo gumb
+                cricketHistory.add(CricketHistoryEntry(activePlayer, sector, gainedPoints = numericValue, addedHit = false))
+
+                checkCricketWinner(context)
             }
         }
     }
 
-    private fun checkCricketWinner(context: Context) { // <-- Dodan context
+    private fun checkCricketWinner(context: Context) {
         val activePlayer = getCurrentPlayer()
         val currentHitsMap = cricketStatus[activePlayer] ?: return
         val allSectorsClosed = currentHitsMap.values.all { it >= 3 }
@@ -237,14 +279,17 @@ class GameViewModel : ViewModel() {
 
             if (hasHighestPoints) {
                 winnerName = activePlayer
-                // CRICKET POBJEDA OSTVARENA -> SPREMAJ STATISTIKU!
                 finishGameAndUploadStats(context)
             }
         }
     }
 
-    fun nextCricketPlayer(context: Context) { // <-- Dodan context
+    fun nextCricketPlayer(context: Context) {
         if (winnerName != null) return
+
+        // Očisti povijest prethodnog igrača jer prelazi red na novu osobu
+        cricketHistory.clear()
+
         if (selectedPlayers.isNotEmpty()) {
             if (currentPlayerIndex == selectedPlayers.size - 1) {
                 if (currentRound >= 15) {
@@ -253,45 +298,7 @@ class GameViewModel : ViewModel() {
                         { player -> playersScores[player] ?: 0 }
                     ))
                     winnerName = bestPlayer
-
-                    // KRAJ KRIKETA NAKON 15 RUNDI -> SPREMAJ STATISTIKU!
                     finishGameAndUploadStats(context)
-                    return
-                } else {
-                    currentRound++
-                }
-            }
-            currentPlayerIndex = (currentPlayerIndex + 1) % selectedPlayers.size
-        }
-    }
-
-    private fun checkCricketWinner() {
-        val activePlayer = getCurrentPlayer()
-        val currentHitsMap = cricketStatus[activePlayer] ?: return
-        val allSectorsClosed = currentHitsMap.values.all { it >= 3 }
-
-        if (allSectorsClosed) {
-            val activePlayerPoints = playersScores[activePlayer] ?: 0
-            val hasHighestPoints = selectedPlayers.all { player ->
-                (playersScores[player] ?: 0) <= activePlayerPoints
-            }
-
-            if (hasHighestPoints) {
-                winnerName = activePlayer
-            }
-        }
-    }
-
-    fun nextCricketPlayer() {
-        if (winnerName != null) return
-        if (selectedPlayers.isNotEmpty()) {
-            if (currentPlayerIndex == selectedPlayers.size - 1) {
-                if (currentRound >= 15) {
-                    val bestPlayer = selectedPlayers.maxWithOrNull(compareBy(
-                        { player -> cricketStatus[player]?.values?.count { it >= 3 } ?: 0 },
-                        { player -> playersScores[player] ?: 0 }
-                    ))
-                    winnerName = bestPlayer
                     return
                 } else {
                     currentRound++
@@ -314,13 +321,11 @@ class GameViewModel : ViewModel() {
             val finalPPTString = getPlayerPPT(playerName)
             val finalPPT = finalPPTString.toDoubleOrNull() ?: 0.0
 
-            // 1. Ažuriranje PPT statistike i slanje lokalne obavijesti u slučaju novog rekorda
-            FirebaseManager.updatePlayerStats(playerName, finalPPT) { name, newRecord ->
+            val isThisPlayerWinner = (playerName == winnerName)
+
+            FirebaseManager.updatePlayerStats(playerName, finalPPT, isThisPlayerWinner) { name, newRecord ->
                 sendLocalNotification(context, playerName = name, pptValue = newRecord)
             }
-
-            // 2. SIGURNO BROJANJE PARTIJA: Tek kada se meč završi, svakom igraču uvećavamo broj odigranih utakmica
-            FirebaseManager.incrementGamesPlayed(playerName)
         }
     }
 
@@ -345,7 +350,6 @@ class GameViewModel : ViewModel() {
     }
 }
 
-// VAŽNO: Ova klasa mora biti izvan zagrada klase GameViewModel!
 data class DartThrow(
     val baseNumber: Int,
     val multiplier: Int
