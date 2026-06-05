@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "66693697424",
+    "project_id": "dartflow-ba124",
+    "storage_bucket": "dartflow-ba124.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:66693697424:android:dd47b91829c27fb366ed15",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCU23WwIEP38-3ABlZjckeTV6KI2dYdLOU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
