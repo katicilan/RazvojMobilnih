@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun CricketGameScreen(
-    playerName: String, // Drži parametar kako bi MainActivity prošla bez greške
+    playerName: String,
     viewModel: GameViewModel,
     onGameFinished: () -> Unit
 ) {
@@ -33,14 +33,11 @@ fun CricketGameScreen(
     val context = LocalContext.current
     var backPressedTime by remember { mutableStateOf(0L) }
 
-    // --- LOGIKA ZA BACK GUMB (1 KLIK = UKLANJANJE ZADNJEG HIT-A, 2 KLIKA = MODES) ---
     BackHandler {
         val currentTime = System.currentTimeMillis()
         if (currentTime - backPressedTime < 2000) {
-            // Dvostruki klik -> povratak na glavni izbornik modova
             onGameFinished()
         } else {
-            // Jedan klik -> Poništavanje zadnje strelice preko handleBackAction() iz ViewModela
             val handled = viewModel.handleBackAction()
             if (!handled) {
                 backPressedTime = currentTime
@@ -49,7 +46,6 @@ fun CricketGameScreen(
         }
     }
 
-    // Dijalog za pobjedu (bilo prekidom u 15. rundi ili zatvaranjem svih polja)
     if (viewModel.winnerName != null) {
         AlertDialog(
             onDismissRequest = {},
@@ -63,7 +59,6 @@ fun CricketGameScreen(
         )
     }
 
-    // Glavni Box kako bi slika bila u pozadini, a komponente preko nje
     Box(modifier = Modifier.fillMaxSize()) {
 
         // --- 1. POZADINSKA SLIKA SA 50% PROZIRNOSTI ---
@@ -72,7 +67,7 @@ fun CricketGameScreen(
             contentDescription = "Pozadina",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            alpha = 0.5f // Točno 50% prozirnosti
+            alpha = 0.5f
         )
 
         // --- 2. GLAVNI SADRŽAJ EKRANA ---
@@ -89,10 +84,10 @@ fun CricketGameScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    text = "Runda: ${viewModel.currentRound} / 15", // Promijenjeno na 15 jer kriket traje 15 rundi
+                    text = "Runda: ${viewModel.currentRound} / 15",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFFE65100), // Narančasta boja za vidljivost preko pozadine
+                    color = Color(0xFFE65100),
                     fontSize = 16.sp
                 )
             }

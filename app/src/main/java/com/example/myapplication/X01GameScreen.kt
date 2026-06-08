@@ -44,10 +44,8 @@ fun X01GameScreen(
     BackHandler {
         val currentTime = System.currentTimeMillis()
         if (currentTime - backPressedTime < 2000) {
-            // Dvostruki klik -> povratak na glavni izbornik
             onGameFinished()
         } else {
-            // Jedan klik -> izvrši poništavanje strelice
             val handled = viewModel.handleBackAction()
             if (!handled) {
                 backPressedTime = currentTime

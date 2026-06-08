@@ -98,7 +98,6 @@ fun PlayerSelectionScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // --- DIO ZA DODAVANJE NOVOG IGRAČA ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,7 +129,6 @@ fun PlayerSelectionScreen(
             }
         }
 
-        // --- POPIS IGRAČA S PROCENTOM POBJEDA ---
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)

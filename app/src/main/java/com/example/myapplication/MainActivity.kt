@@ -41,16 +41,15 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // Zamijeni NavHost i rute unutar MainActivity.kt s ovim:
+
                         NavHost(
                             navController = navController,
-                            startDestination = "splash" // Aplikacija sada KREĆE od Splash zaslona!
+                            startDestination = "splash"
                         ) {
-                            // --- 0. Ekran: Splash Screen (DODANO) ---
+
                             composable(route = "splash") {
                                 SplashScreen(
                                     onTimeout = {
-                                        // Preusmjeravanje na odabir moda i uklanjanje splash-a iz povijesti (Back stacka)
                                         navController.navigate("mode_selection") {
                                             popUpTo("splash") { inclusive = true }
                                         }
@@ -61,9 +60,7 @@ class MainActivity : ComponentActivity() {
                             composable(route = "mode_selection") {
                                 ModeSelectionScreen(
                                     onModeSelected = { selectedMode ->
-                                        // Čim igrač klikne mod, ODMAH ga zaključavamo u ViewModelu!
                                         gameViewModel.currentTrackedMode = selectedMode
-                                        // Navigacija je sada potpuno jednostavna i sigurna
                                         navController.navigate("player_selection")
                                     }
                                 )
@@ -74,10 +71,7 @@ class MainActivity : ComponentActivity() {
                                 PlayerSelectionScreen(
                                     viewModel = gameViewModel,
                                     onPlayersSelected = { selectedPlayersList ->
-                                        // Pokrećemo igru s modom koji smo već spremili u prošlom koraku
                                         gameViewModel.startNewGame(gameViewModel.currentTrackedMode, selectedPlayersList)
-
-                                        // Idemo na odgovarajući zaslon igre
                                         if (gameViewModel.currentTrackedMode == DartMode.CRICKET) {
                                             navController.navigate("cricket_game")
                                         } else {

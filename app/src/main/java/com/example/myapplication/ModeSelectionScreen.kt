@@ -24,8 +24,8 @@ fun ModeSelectionScreen(onModeSelected: (DartMode) -> Unit) {
             painter = painterResource(id = R.drawable.wallpaper),
             contentDescription = "Pozadina",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop, // Rasteže sliku preko cijelog ekrana bez izobličenja
-            alpha = 0.8f // Postavlja prozirnost na točno 50%
+            contentScale = ContentScale.Crop,
+            alpha = 0.8f
         )
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),

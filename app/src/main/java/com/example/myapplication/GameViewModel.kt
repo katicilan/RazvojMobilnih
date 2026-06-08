@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 
-// Pomoćna klasa za pamćenje povijesti kriket pogodaka (kako bi Undo/Back radio)
 data class CricketHistoryEntry(
     val player: String,
     val sector: String,
@@ -42,7 +41,6 @@ class GameViewModel : ViewModel() {
     private var scoreAtStartOfTurn = 501
 
     var cricketStatus = mutableStateMapOf<String, Map<String, Int>>()
-    // Lista u kojoj pamtimo pogotke unutar trenutne runde za kriket (za Undo)
     private var cricketHistory = mutableStateListOf<CricketHistoryEntry>()
 
     fun getMaxRounds(mode: DartMode): Int {
@@ -162,7 +160,6 @@ class GameViewModel : ViewModel() {
     fun handleBackAction(): Boolean {
         if (winnerName != null) return false
 
-        // Ako igramo CRICKET mod, radimo undo preko kriket povijesti
         if (currentTrackedMode == DartMode.CRICKET) {
             if (cricketHistory.isNotEmpty()) {
                 val lastAction = cricketHistory.removeAt(cricketHistory.size - 1)
@@ -185,7 +182,7 @@ class GameViewModel : ViewModel() {
             return false
         }
 
-        // Standardno poništavanje za X01 igre
+
         val lastDartIndex = currentDarts.indexOfLast { it != null }
         if (lastDartIndex != -1) {
             undoLastDart()
@@ -244,7 +241,6 @@ class GameViewModel : ViewModel() {
             updatedHitsMap[sector] = currentHits + 1
             cricketStatus[activePlayer] = updatedHitsMap
 
-            // Spremi u povijest za Undo gumb
             cricketHistory.add(CricketHistoryEntry(activePlayer, sector, gainedPoints = 0, addedHit = true))
 
             checkCricketWinner(context)
@@ -257,8 +253,6 @@ class GameViewModel : ViewModel() {
             if (anyOpponentNotClosed) {
                 val currentPoints = playersScores[activePlayer] ?: 0
                 playersScores[activePlayer] = currentPoints + numericValue
-
-                // Spremi u povijest za Undo gumb
                 cricketHistory.add(CricketHistoryEntry(activePlayer, sector, gainedPoints = numericValue, addedHit = false))
 
                 checkCricketWinner(context)
@@ -286,8 +280,6 @@ class GameViewModel : ViewModel() {
 
     fun nextCricketPlayer(context: Context) {
         if (winnerName != null) return
-
-        // Očisti povijest prethodnog igrača jer prelazi red na novu osobu
         cricketHistory.clear()
 
         if (selectedPlayers.isNotEmpty()) {
