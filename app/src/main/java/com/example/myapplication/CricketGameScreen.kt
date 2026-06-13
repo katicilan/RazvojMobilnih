@@ -174,7 +174,7 @@ fun CricketGameScreen(
 
             // --- GUMB ZA SLJEDEĆEG IGRAČA ---
             Button(
-                onClick = { viewModel.nextCricketPlayer(context) }, // POPRAVLJENO: Prolijeđen context parametar!
+                onClick = { viewModel.nextCricketPlayer(context) },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()

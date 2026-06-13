@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
+import java.util.Locale
 
 data class CricketHistoryEntry(
     val player: String,
@@ -18,6 +19,13 @@ data class CricketHistoryEntry(
     val gainedPoints: Int,
     val addedHit: Boolean
 )
+
+data class DartThrow(
+    val baseNumber: Int,
+    val multiplier: Int
+) {
+    val score: Int get() = baseNumber * multiplier
+}
 
 class GameViewModel : ViewModel() {
     var firebasePlayers = mutableStateListOf<Player>()
@@ -182,7 +190,6 @@ class GameViewModel : ViewModel() {
             return false
         }
 
-
         val lastDartIndex = currentDarts.indexOfLast { it != null }
         if (lastDartIndex != -1) {
             undoLastDart()
@@ -226,7 +233,8 @@ class GameViewModel : ViewModel() {
         val totalThrows = playerTotalThrows[player] ?: 0
         if (totalThrows == 0) return "0.0"
         val ppt = totalPoints.toDouble() / totalThrows
-        return String.format("%.1f", ppt)
+
+        return String.format(Locale.US, "%.1f", ppt)
     }
 
     fun handleCricketSectorClick(sector: String, context: Context) {
@@ -340,11 +348,4 @@ class GameViewModel : ViewModel() {
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notification)
     }
-}
-
-data class DartThrow(
-    val baseNumber: Int,
-    val multiplier: Int
-) {
-    val score: Int get() = baseNumber * multiplier
 }
